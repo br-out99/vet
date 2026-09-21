@@ -1,0 +1,52 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>🔍 Buscar Mascota</h2>
+
+<div class="search-box" style="margin: 20px 0;">
+    <form method="GET" style="display: flex; gap: 10px; width: 100%;">
+        <input type="text" name="q" placeholder="Buscar por nombre..." value="{{ query }}" style="flex: 1;">
+        <button type="submit" class="btn">🔍 Buscar</button>
+    </form>
+</div>
+
+{% if query %}
+    <h3>Resultados para "{{ query }}":</h3>
+    
+    {% if mascotas %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Especie</th>
+                    <th>Edad</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mascota in mascotas %}
+                    <tr>
+                        <td><strong>{{ mascota.nombre }}</strong></td>
+                        <td>{{ mascota.get_especie_display }}</td>
+                        <td>{{ mascota.edad }}</td>
+                        <td>
+                            <span class="estado-badge 
+                                {% if mascota.estado_vacunacion == 'al_dia' %}estado-verde
+                                {% elif mascota.estado_vacunacion == 'pendiente' %}estado-rojo
+                                {% elif mascota.estado_vacunacion == 'alergia' %}estado-amarillo
+                                {% endif %}
+                            ">
+                                {{ mascota.get_estado_vacunacion_display }}
+                            </span>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; padding: 40px; background: #f9f9f9; border-radius: 5px;">
+            😔 No se encontraron mascotas con ese nombre
+        </p>
+    {% endif %}
+{% endif %}
+{% endblock %}

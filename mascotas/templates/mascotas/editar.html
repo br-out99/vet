@@ -1,0 +1,51 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>✏️ Editar: {{ mascota.nombre }}</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" name="nombre" required value="{{ mascota.nombre }}">
+    </div>
+    
+    <div class="form-group">
+        <label>Especie *</label>
+        <select name="especie" required>
+            {% for value, label in especies %}
+                <option value="{{ value }}" {% if mascota.especie == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Edad (años) *</label>
+        <input type="number" name="edad" required min="0" max="50" value="{{ mascota.edad }}">
+    </div>
+    
+    <div class="form-group">
+        <label>Estado de Vacunación *</label>
+        <select name="estado_vacunacion" required>
+            {% for value, label in estados %}
+                <option value="{{ value }}" {% if mascota.estado_vacunacion == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Fecha de Última Vacuna</label>
+        <input type="date" name="fecha_ultima_vacuna" value="{{ mascota.fecha_ultima_vacuna|date:'Y-m-d' }}">
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-success">💾 Actualizar</button>
+        <a href="{% url 'lista_mascotas' %}" class="btn btn-danger">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

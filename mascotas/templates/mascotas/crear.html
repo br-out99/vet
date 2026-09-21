@@ -1,0 +1,49 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>➕ Nueva Mascota</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" name="nombre" required placeholder="Ej: Firulais">
+    </div>
+    
+    <div class="form-group">
+        <label>Especie *</label>
+        <select name="especie" required>
+            <option value="">Seleccione...</option>
+            {% for value, label in especies %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Edad (años) *</label>
+        <input type="number" name="edad" required min="0" max="50" placeholder="Ej: 5">
+    </div>
+    
+    <div class="form-group">
+        <label>Estado de Vacunación *</label>
+        <select name="estado_vacunacion" required>
+            <option value="">Seleccione...</option>
+            {% for value, label in estados %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Fecha de Última Vacuna</label>
+        <input type="date" name="fecha_ultima_vacuna">
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-success">💾 Guardar Mascota</button>
+        <a href="{% url 'lista_mascotas' %}" class="btn btn-danger">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

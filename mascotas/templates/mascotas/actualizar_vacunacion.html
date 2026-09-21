@@ -1,0 +1,50 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>💉 Actualizar Vacunación: {{ mascota.nombre }}</h2>
+
+<div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3498db;">
+    <p style="margin-bottom: 10px;"><strong>📋 Información actual:</strong></p>
+    <p><strong>Nombre:</strong> {{ mascota.nombre }}</p>
+    <p><strong>Especie:</strong> {{ mascota.get_especie_display }}</p>
+    <p><strong>Edad:</strong> {{ mascota.edad }} años</p>
+    <p><strong>Estado actual:</strong> 
+        <span class="estado-badge 
+            {% if mascota.estado_vacunacion == 'al_dia' %}estado-verde
+            {% elif mascota.estado_vacunacion == 'pendiente' %}estado-rojo
+            {% elif mascota.estado_vacunacion == 'alergia' %}estado-amarillo
+            {% endif %}
+        ">
+            {{ mascota.get_estado_vacunacion_display }}
+        </span>
+    </p>
+    <p><strong>Última vacuna:</strong> {{ mascota.fecha_ultima_vacuna|default:"No registrada" }}</p>
+</div>
+
+<form method="POST">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Nuevo Estado de Vacunación *</label>
+        <select name="estado_vacunacion" required>
+            {% for value, label in estados %}
+                <option value="{{ value }}" {% if mascota.estado_vacunacion == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Fecha de la Vacuna Aplicada (si corresponde)</label>
+        <input type="date" name="fecha_ultima_vacuna" 
+               value="{{ mascota.fecha_ultima_vacuna|date:'Y-m-d' }}">
+        <small style="color: #666;">Solo completa este campo si se aplicó una vacuna hoy</small>
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-success">💾 Guardar Cambios</button>
+        <a href="{% url 'lista_mascotas' %}" class="btn btn-danger">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>📋 Lista de Mascotas</h2>
+
+<!-- Filtros -->
+<!-- Filtros -->
+<div class="filtros">
+    <form method="GET" style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <select name="especie">
+            <option value="">Todas las especies</option>
+            {% for codigo, etiqueta in especies %}
+                <option value="{{ codigo }}" {% if especie_seleccionada == codigo %}selected{% endif %}>
+                    {{ etiqueta }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn">Filtrar</button>
+        {% if especie_seleccionada %}
+            <a href="{% url 'lista_mascotas' %}" class="btn btn-danger">Limpiar filtro</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Tabla -->
+<table>
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Especie</th>
+            <th>Edad (años)</th>
+            <th>Estado de Vacunación</th>
+            <th>Última Vacuna</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for mascota in mascotas %}
+            <tr class="
+                {% if mascota.estado_vacunacion == 'al_dia' %}vacunado-verde
+                {% elif mascota.estado_vacunacion == 'pendiente' %}vacunado-rojo
+                {% elif mascota.estado_vacunacion == 'alergia' %}vacunado-amarillo
+                {% endif %}
+            ">
+                <td><strong>{{ mascota.nombre }}</strong></td>
+                <td>{{ mascota.get_especie_display }}</td>
+                <td>{{ mascota.edad }}</td>
+                <td>
+                    <span class="estado-badge 
+                        {% if mascota.estado_vacunacion == 'al_dia' %}estado-verde
+                        {% elif mascota.estado_vacunacion == 'pendiente' %}estado-rojo
+                        {% elif mascota.estado_vacunacion == 'alergia' %}estado-amarillo
+                        {% endif %}
+                    ">
+                        {{ mascota.get_estado_vacunacion_display }}
+                    </span>
+                    {% if mascota.necesita_vacuna_este_mes %}
+                        <br><small style="color: red;">⚠️ Necesita vacuna este mes</small>
+                    {% endif %}
+                </td>
+                <td>{{ mascota.fecha_ultima_vacuna|default:"No registrada" }}</td>
+                <td>
+                    <div class="acciones">
+                        {% if user.is_superuser or user.is_staff %}
+                            <a href="{% url 'editar_mascota' mascota.pk %}" class="btn btn-warning" title="Editar">✏️</a>
+                            <a href="{% url 'actualizar_vacunacion' mascota.pk %}" class="btn btn-success" title="Actualizar ">💉</a>
+                            <a href="{% url 'eliminar_mascota' mascota.pk %}" class="btn btn-danger" title="Eliminar">🗑️</a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px;">
+                    🐾 No hay mascotas registradas
+                    {% if user.is_superuser or user.is_staff %}
+                        <br><a href="{% url 'crear_mascota' %}" class="btn" style="margin-top: 10px;">Agregar primera mascota</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 20px; font-size: 14px; color: #666;">
+    <span>🔵 <strong>Leyenda:</strong></span>
+    <span style="background: #d5f5e3; padding: 3px 10px; margin: 0 5px;">✅ Vacunado</span>
+    <span style="background: #fadbd8; padding: 3px 10px; margin: 0 5px;">❌ Pendiente</span>
+    <span style="background: #fdebd0; padding: 3px 10px; margin: 0 5px;">🔶 Alergia</span>
+</div>
+
+<!-- Botón de vacunas del mes -->
+<div style="margin-top: 20px;">
+    <a href="{% url 'vacunas_mes' %}" class="btn btn-success">💉 Ver mascotas que necesitan vacuna este mes</a>
+</div>
+{% endblock %}

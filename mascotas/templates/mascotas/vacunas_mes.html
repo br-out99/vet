@@ -1,0 +1,52 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>💉 Mascotas que Necesitan Vacuna Este Mes</h2>
+
+{% if mascotas %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Especie</th>
+                <th>Edad</th>
+                <th>Estado Actual</th>
+                <th>Última Vacuna</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mascota in mascotas %}
+                <tr>
+                    <td><strong>{{ mascota.nombre }}</strong></td>
+                    <td>{{ mascota.get_especie_display }}</td>
+                    <td>{{ mascota.edad }}</td>
+                    <td>
+                        <span class="estado-badge estado-rojo">
+                            {{ mascota.get_estado_vacunacion_display }}
+                        </span>
+                    </td>
+                    <td>{{ mascota.fecha_ultima_vacuna|default:"No registrada" }}</td>
+                    <td>
+                        {% if user.is_superuser or user.is_staff %}
+                            <a href="{% url 'actualizar_vacunacion' mascota.pk %}" class="btn btn-success" title="Actualizar vacunación">💉</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div style="text-align: center; padding: 40px; background: #f9f9f9; border-radius: 5px; margin-top: 20px;">
+        <p style="font-size: 40px;">🎉</p>
+        <p style="font-size: 18px; color: #27ae60;">
+            <strong>¡Excelente! No hay mascotas pendientes de vacuna este mes.</strong>
+        </p>
+        <p style="color: #666;">Todas las mascotas están al día o tienen alergia a las vacunas.</p>
+    </div>
+{% endif %}
+
+<div style="margin-top: 20px;">
+    <a href="{% url 'lista_mascotas' %}" class="btn">← Volver a la lista</a>
+</div>
+{% endblock %}

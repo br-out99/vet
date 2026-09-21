@@ -1,0 +1,22 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>🗑️ Eliminar Mascota</h2>
+
+<div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0;">
+    <p style="font-size: 18px;">
+        ¿Estás seguro que deseas eliminar a <strong>{{ mascota.nombre }}</strong>?
+    </p>
+    <p><strong>Especie:</strong> {{ mascota.get_especie_display }}</p>
+    <p><strong>Edad:</strong> {{ mascota.edad }} años</p>
+    <p><strong>Estado:</strong> {{ mascota.get_estado_vacunacion_display }}</p>
+</div>
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">🗑️ Sí, eliminar</button>
+        <a href="{% url 'lista_mascotas' %}" class="btn">Cancelar</a>
+    </div>
+</form>
+{% endblock %}
