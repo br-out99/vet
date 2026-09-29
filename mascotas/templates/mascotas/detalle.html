@@ -1,0 +1,71 @@
+{% extends 'mascotas/base.html' %}
+
+{% block content %}
+<h2>🐾 Detalle de {{ mascota.nombre }}</h2>
+
+<div style="background: #f9f9f9; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 5px solid 
+    {% if mascota.estado_vacunacion == 'al_dia' %}#27ae60
+    {% elif mascota.estado_vacunacion == 'pendiente' %}#e74c3c
+    {% else %}#f39c12{% endif %};">
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div>
+            <p style="color: #666; font-size: 13px; margin: 0;">NOMBRE</p>
+            <p style="font-size: 20px; margin: 5px 0;"><strong>{{ mascota.nombre }}</strong></p>
+        </div>
+
+        <div>
+            <p style="color: #666; font-size: 13px; margin: 0;">ESPECIE</p>
+            <p style="font-size: 20px; margin: 5px 0;">{{ mascota.get_especie_display }}</p>
+        </div>
+
+        <div>
+            <p style="color: #666; font-size: 13px; margin: 0;">EDAD</p>
+            <p style="font-size: 20px; margin: 5px 0;">{{ mascota.edad }} años</p>
+        </div>
+
+        <div>
+            <p style="color: #666; font-size: 13px; margin: 0;">ESTADO DE VACUNACIÓN</p>
+            <p style="margin: 5px 0;">
+                <span class="estado-badge 
+                    {% if mascota.estado_vacunacion == 'al_dia' %}estado-verde
+                    {% elif mascota.estado_vacunacion == 'pendiente' %}estado-rojo
+                    {% else %}estado-amarillo{% endif %}">
+                    {{ mascota.get_estado_vacunacion_display }}
+                </span>
+            </p>
+        </div>
+
+        <div>
+            <p style="color: #666; font-size: 13px; margin: 0;">ÚLTIMA VACUNA</p>
+            <p style="font-size: 16px; margin: 5px 0;">{{ mascota.fecha_ultima_vacuna|default:"No registrada" }}</p>
+        </div>
+
+        <div>
+            <p style="color: #666; font-size: 13px; margin: 0;">VETERINARIO A CARGO</p>
+            <p style="font-size: 16px; margin: 5px 0;">{{ mascota.veterinario.username|default:"—" }}</p>
+        </div>
+    </div>
+
+    {% if mascota.necesita_vacuna_este_mes %}
+        <div style="background: #fadbd8; padding: 10px; border-radius: 5px; margin-top: 20px;">
+            ⚠️ <strong>Esta mascota necesita vacuna este mes</strong>
+        </div>
+    {% endif %}
+</div>
+
+<div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+    <a href="{% url 'lista_mascotas' %}" class="btn">← Volver a la lista</a>
+
+    {% if user.is_superuser or user.is_staff or mascota.veterinario == user %}
+        <a href="{% url 'editar_mascota' mascota.pk %}" class="btn btn-warning">✏️ Editar</a>
+        <a href="{% url 'actualizar_vacunacion' mascota.pk %}" class="btn btn-success">💉 Actualizar vacunación</a>
+        <a href="{% url 'eliminar_mascota' mascota.pk %}" class="btn btn-danger">🗑️ Eliminar</a>
+    {% endif %}
+</div>
+
+<p style="margin-top: 30px; color: #999; font-size: 12px;">
+    Registrada el {{ mascota.fecha_creacion|date:"d/m/Y H:i" }} |
+    Última actualización: {{ mascota.fecha_actualizacion|date:"d/m/Y H:i" }}
+</p>
+{% endblock %}
