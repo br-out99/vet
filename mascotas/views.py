@@ -3,23 +3,18 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Q
 from datetime import date
 
 from .models import Mascota
 
 
 # ============================================================
-# FUNCIÓN AUXILIAR: Verificar si el usuario es administrador
+# FUNCIONES AUXILIARES
 # ============================================================
 def es_administrador(user):
     return user.is_superuser or user.is_staff
 
 
-# ============================================================
-# FUNCIÓN AUXILIAR: Obtener mascotas visibles para el usuario
-# Admin ve todas, veterinario solo las suyas
-# ============================================================
 def mascotas_visibles_para(user):
     if user.is_superuser or user.is_staff:
         return Mascota.objects.all()
@@ -33,16 +28,13 @@ def mascotas_visibles_para(user):
 def lista_mascotas(request):
     mascotas = mascotas_visibles_para(request.user).order_by('nombre')
 
-    # Filtrar por especie
     especie_filtro = request.GET.get('especie', '').strip().lower()
     if especie_filtro:
         mascotas = mascotas.filter(especie__iexact=especie_filtro)
 
-    especies = Mascota.ESPECIE_CHOICES
-
     context = {
         'mascotas': mascotas,
-        'especies': especies,
+        'especies': Mascota.ESPECIE_CHOICES,
         'especie_seleccionada': especie_filtro,
         'es_admin': request.user.is_superuser or request.user.is_staff,
     }
@@ -50,31 +42,77 @@ def lista_mascotas(request):
 
 
 # ============================================================
-# CREAR MASCOTA (solo administradores)
+# CREAR MASCOTA (solo admin) - CON VALIDACIÓN
 # ============================================================
 @login_required
 @user_passes_test(es_administrador)
 def crear_mascota(request):
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        especie = request.POST.get('especie')
-        edad = request.POST.get('edad')
-        estado_vacunacion = request.POST.get('estado_vacunacion')
-        fecha_ultima_vacuna = request.POST.get('fecha_ultima_vacuna')
+        nombre = request.POST.get('nombre', '').strip()
+        especie = request.POST.get('especie', '').strip()
+        edad = request.POST.get('edad', '').strip()
+        estado_vacunacion = request.POST.get('estado_vacunacion', '').strip()
+        fecha_ultima_vacuna = request.POST.get('fecha_ultima_vacuna', '').strip()
 
-        if nombre and especie and edad:
-            Mascota.objects.create(
-                nombre=nombre,
-                especie=especie,
-                edad=edad,
-                estado_vacunacion=estado_vacunacion,
-                fecha_ultima_vacuna=fecha_ultima_vacuna if fecha_ultima_vacuna else None,
-                veterinario=request.user  # <-- asigna el usuario actual
-            )
-            messages.success(request, f'¡Mascota {nombre} creada exitosamente!')
-            return redirect('lista_mascotas')
+        errores = []
+
+        if not nombre:
+            errores.append('El nombre es obligatorio.')
+        elif len(nombre) < 2:
+            errores.append('El nombre debe tener al menos 2 caracteres.')
+        elif len(nombre) > 100:
+            errores.append('El nombre no puede tener más de 100 caracteres.')
+
+        especies_validas = [c[0] for c in Mascota.ESPECIE_CHOICES]
+        if not especie:
+            errores.append('La especie es obligatoria.')
+        elif especie not in especies_validas:
+            errores.append('La especie seleccionada no es válida.')
+
+        if not edad:
+            errores.append('La edad es obligatoria.')
         else:
-            messages.error(request, 'Por favor complete todos los campos obligatorios')
+            try:
+                edad_int = int(edad)
+                if edad_int < 0:
+                    errores.append('La edad no puede ser negativa.')
+                elif edad_int > 50:
+                    errores.append('La edad no puede ser mayor a 50 años.')
+            except ValueError:
+                errores.append('La edad debe ser un número entero.')
+
+        estados_validos = [c[0] for c in Mascota.VACUNACION_CHOICES]
+        if not estado_vacunacion:
+            errores.append('El estado de vacunación es obligatorio.')
+        elif estado_vacunacion not in estados_validos:
+            errores.append('El estado de vacunación no es válido.')
+
+        if fecha_ultima_vacuna:
+            try:
+                fecha_dt = date.fromisoformat(fecha_ultima_vacuna)
+                if fecha_dt > date.today():
+                    errores.append('La fecha de vacuna no puede ser futura.')
+            except ValueError:
+                errores.append('La fecha de vacuna no es válida.')
+
+        if errores:
+            return render(request, 'mascotas/crear.html', {
+                'especies': Mascota.ESPECIE_CHOICES,
+                'estados': Mascota.VACUNACION_CHOICES,
+                'errores': errores,
+                'datos': request.POST,
+            })
+
+        Mascota.objects.create(
+            nombre=nombre,
+            especie=especie,
+            edad=int(edad),
+            estado_vacunacion=estado_vacunacion,
+            fecha_ultima_vacuna=fecha_ultima_vacuna if fecha_ultima_vacuna else None,
+            veterinario=request.user
+        )
+        messages.success(request, f'¡Mascota {nombre} creada exitosamente!')
+        return redirect('lista_mascotas')
 
     return render(request, 'mascotas/crear.html', {
         'especies': Mascota.ESPECIE_CHOICES,
@@ -83,23 +121,67 @@ def crear_mascota(request):
 
 
 # ============================================================
-# EDITAR MASCOTA (solo admin o dueño de la mascota)
+# EDITAR MASCOTA (admin o dueño) - CON VALIDACIÓN
 # ============================================================
 @login_required
 def editar_mascota(request, pk):
     mascota = get_object_or_404(Mascota, pk=pk)
 
-    # Verificar permiso: admin o dueño
     if not (request.user.is_superuser or request.user.is_staff or mascota.veterinario == request.user):
         messages.error(request, 'No tienes permiso para editar esta mascota.')
         return redirect('lista_mascotas')
 
     if request.method == 'POST':
-        mascota.nombre = request.POST.get('nombre')
-        mascota.especie = request.POST.get('especie')
-        mascota.edad = request.POST.get('edad')
-        mascota.estado_vacunacion = request.POST.get('estado_vacunacion')
-        mascota.fecha_ultima_vacuna = request.POST.get('fecha_ultima_vacuna') or None
+        nombre = request.POST.get('nombre', '').strip()
+        especie = request.POST.get('especie', '').strip()
+        edad = request.POST.get('edad', '').strip()
+        estado_vacunacion = request.POST.get('estado_vacunacion', '').strip()
+        fecha_ultima_vacuna = request.POST.get('fecha_ultima_vacuna', '').strip()
+
+        errores = []
+
+        if not nombre or len(nombre) < 2:
+            errores.append('El nombre debe tener al menos 2 caracteres.')
+        elif len(nombre) > 100:
+            errores.append('El nombre no puede tener más de 100 caracteres.')
+
+        especies_validas = [c[0] for c in Mascota.ESPECIE_CHOICES]
+        if especie not in especies_validas:
+            errores.append('La especie seleccionada no es válida.')
+
+        try:
+            edad_int = int(edad)
+            if edad_int < 0 or edad_int > 50:
+                errores.append('La edad debe estar entre 0 y 50 años.')
+        except ValueError:
+            errores.append('La edad debe ser un número entero.')
+
+        estados_validos = [c[0] for c in Mascota.VACUNACION_CHOICES]
+        if estado_vacunacion not in estados_validos:
+            errores.append('El estado de vacunación no es válido.')
+
+        if fecha_ultima_vacuna:
+            try:
+                fecha_dt = date.fromisoformat(fecha_ultima_vacuna)
+                if fecha_dt > date.today():
+                    errores.append('La fecha de vacuna no puede ser futura.')
+            except ValueError:
+                errores.append('La fecha de vacuna no es válida.')
+
+        if errores:
+            return render(request, 'mascotas/editar.html', {
+                'mascota': mascota,
+                'especies': Mascota.ESPECIE_CHOICES,
+                'estados': Mascota.VACUNACION_CHOICES,
+                'errores': errores,
+                'datos': request.POST,
+            })
+
+        mascota.nombre = nombre
+        mascota.especie = especie
+        mascota.edad = int(edad)
+        mascota.estado_vacunacion = estado_vacunacion
+        mascota.fecha_ultima_vacuna = fecha_ultima_vacuna if fecha_ultima_vacuna else None
         mascota.save()
 
         messages.success(request, f'¡Mascota {mascota.nombre} actualizada!')
@@ -113,7 +195,7 @@ def editar_mascota(request, pk):
 
 
 # ============================================================
-# ELIMINAR MASCOTA (solo admin o dueño)
+# ELIMINAR MASCOTA (admin o dueño)
 # ============================================================
 @login_required
 def eliminar_mascota(request, pk):
@@ -134,11 +216,11 @@ def eliminar_mascota(request, pk):
 
 
 # ============================================================
-# BUSCAR MASCOTA POR NOMBRE (solo las visibles)
+# BUSCAR MASCOTA POR NOMBRE
 # ============================================================
 @login_required
 def buscar_mascota(request):
-    query = request.GET.get('q', '')
+    query = request.GET.get('q', '').strip()
     mascotas = []
     if query:
         mascotas = mascotas_visibles_para(request.user).filter(nombre__icontains=query)
@@ -163,7 +245,7 @@ def vacunas_mes(request):
 
 
 # ============================================================
-# ACTUALIZAR ESTADO DE VACUNACIÓN (solo admin o dueño)
+# ACTUALIZAR ESTADO DE VACUNACIÓN (admin o dueño)
 # ============================================================
 @login_required
 def actualizar_vacunacion(request, pk):
@@ -174,16 +256,36 @@ def actualizar_vacunacion(request, pk):
         return redirect('lista_mascotas')
 
     if request.method == 'POST':
-        nuevo_estado = request.POST.get('estado_vacunacion')
-        fecha_vacuna = request.POST.get('fecha_ultima_vacuna')
+        nuevo_estado = request.POST.get('estado_vacunacion', '').strip()
+        fecha_vacuna = request.POST.get('fecha_ultima_vacuna', '').strip()
 
-        if nuevo_estado:
-            mascota.estado_vacunacion = nuevo_estado
-            if fecha_vacuna:
-                mascota.fecha_ultima_vacuna = fecha_vacuna
-            mascota.save()
-            messages.success(request, f'¡Estado de vacunación de {mascota.nombre} actualizado!')
-            return redirect('lista_mascotas')
+        errores = []
+        estados_validos = [c[0] for c in Mascota.VACUNACION_CHOICES]
+        if nuevo_estado not in estados_validos:
+            errores.append('El estado de vacunación no es válido.')
+
+        if fecha_vacuna:
+            try:
+                fecha_dt = date.fromisoformat(fecha_vacuna)
+                if fecha_dt > date.today():
+                    errores.append('La fecha de vacuna no puede ser futura.')
+            except ValueError:
+                errores.append('La fecha de vacuna no es válida.')
+
+        if errores:
+            return render(request, 'mascotas/actualizar_vacunacion.html', {
+                'mascota': mascota,
+                'estados': Mascota.VACUNACION_CHOICES,
+                'errores': errores,
+            })
+
+        mascota.estado_vacunacion = nuevo_estado
+        if fecha_vacuna:
+            mascota.fecha_ultima_vacuna = fecha_vacuna
+        mascota.save()
+
+        messages.success(request, f'¡Estado de vacunación de {mascota.nombre} actualizado!')
+        return redirect('lista_mascotas')
 
     return render(request, 'mascotas/actualizar_vacunacion.html', {
         'mascota': mascota,

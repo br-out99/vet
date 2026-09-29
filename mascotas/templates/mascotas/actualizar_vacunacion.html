@@ -3,6 +3,17 @@
 {% block content %}
 <h2>💉 Actualizar Vacunación: {{ mascota.nombre }}</h2>
 
+{% if errores %}
+    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+        <strong>❌ Por favor corrige los siguientes errores:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+            {% for error in errores %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
 <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3498db;">
     <p style="margin-bottom: 10px;"><strong>📋 Información actual:</strong></p>
     <p><strong>Nombre:</strong> {{ mascota.nombre }}</p>
@@ -39,7 +50,7 @@
         <label>Fecha de la Vacuna Aplicada (si corresponde)</label>
         <input type="date" name="fecha_ultima_vacuna" 
                value="{{ mascota.fecha_ultima_vacuna|date:'Y-m-d' }}">
-        <small style="color: #666;">Solo completa este campo si se aplicó una vacuna hoy</small>
+        <small style="color: #666;">No puede ser una fecha futura</small>
     </div>
     
     <div class="form-actions">

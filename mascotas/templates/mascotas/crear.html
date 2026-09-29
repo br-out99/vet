@@ -3,12 +3,28 @@
 {% block content %}
 <h2>➕ Nueva Mascota</h2>
 
+{% if errores %}
+    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+        <strong>❌ Por favor corrige los siguientes errores:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+            {% for error in errores %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
 <form method="POST">
     {% csrf_token %}
     
     <div class="form-group">
         <label>Nombre *</label>
-        <input type="text" name="nombre" required placeholder="Ej: Firulais">
+        <input type="text" name="nombre" required 
+               placeholder="Ej: Firulais" 
+               maxlength="100"
+               minlength="2"
+               value="{{ datos.nombre|default:'' }}">
+        <small style="color: #666;">Mínimo 2 caracteres, máximo 100</small>
     </div>
     
     <div class="form-group">
@@ -16,14 +32,18 @@
         <select name="especie" required>
             <option value="">Seleccione...</option>
             {% for value, label in especies %}
-                <option value="{{ value }}">{{ label }}</option>
+                <option value="{{ value }}" {% if datos.especie == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
     </div>
     
     <div class="form-group">
         <label>Edad (años) *</label>
-        <input type="number" name="edad" required min="0" max="50" placeholder="Ej: 5">
+        <input type="number" name="edad" required 
+               min="0" max="50" 
+               placeholder="Ej: 5"
+               value="{{ datos.edad|default:'' }}">
+        <small style="color: #666;">Entre 0 y 50 años</small>
     </div>
     
     <div class="form-group">
@@ -31,14 +51,14 @@
         <select name="estado_vacunacion" required>
             <option value="">Seleccione...</option>
             {% for value, label in estados %}
-                <option value="{{ value }}">{{ label }}</option>
+                <option value="{{ value }}" {% if datos.estado_vacunacion == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
     </div>
     
     <div class="form-group">
-        <label>Fecha de Última Vacuna</label>
-        <input type="date" name="fecha_ultima_vacuna">
+        <label>Fecha de Última Vacuna (opcional)</label>
+        <input type="date" name="fecha_ultima_vacuna" value="{{ datos.fecha_ultima_vacuna|default:'' }}">
     </div>
     
     <div class="form-actions">
