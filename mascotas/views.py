@@ -45,7 +45,6 @@ def lista_mascotas(request):
 # CREAR MASCOTA (solo admin) - CON VALIDACIÓN
 # ============================================================
 @login_required
-@user_passes_test(es_administrador)
 def crear_mascota(request):
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()

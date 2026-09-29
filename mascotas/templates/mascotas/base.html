@@ -266,9 +266,7 @@
             <a href="{% url 'vacunas_mes' %}">💉 Vacunas del Mes</a>
 
             {% if user.is_authenticated %}
-            {% if user.is_superuser or user.is_staff %}
             <a href="{% url 'crear_mascota' %}" style="background: #27ae60;">➕ Nueva Mascota</a>
-            {% endif %}
             <span class="user-info">
                 👤 {{ user.username }}
                 {% if user.is_superuser or user.is_staff %}
