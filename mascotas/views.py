@@ -17,21 +17,27 @@ def es_administrador(user):
 
 
 # ============================================================
-# LISTA DE MASCOTAS (todos los usuarios autenticados pueden ver)
+# FUNCIÓN AUXILIAR: Obtener mascotas visibles para el usuario
+# Admin ve todas, veterinario solo las suyas
 # ============================================================
+def mascotas_visibles_para(user):
+    if user.is_superuser or user.is_staff:
+        return Mascota.objects.all()
+    return Mascota.objects.filter(veterinario=user)
+
+
 # ============================================================
-# LISTA DE MASCOTAS (todos los usuarios autenticados pueden ver)
+# LISTA DE MASCOTAS
 # ============================================================
 @login_required
 def lista_mascotas(request):
-    mascotas = Mascota.objects.all().order_by('nombre')
+    mascotas = mascotas_visibles_para(request.user).order_by('nombre')
 
-    # Filtrar por especie si se envía por GET
+    # Filtrar por especie
     especie_filtro = request.GET.get('especie', '').strip().lower()
     if especie_filtro:
         mascotas = mascotas.filter(especie__iexact=especie_filtro)
 
-    # Usar DIRECTAMENTE las opciones del modelo (fijas y sin duplicados)
     especies = Mascota.ESPECIE_CHOICES
 
     context = {
@@ -41,6 +47,7 @@ def lista_mascotas(request):
         'es_admin': request.user.is_superuser or request.user.is_staff,
     }
     return render(request, 'mascotas/lista.html', context)
+
 
 # ============================================================
 # CREAR MASCOTA (solo administradores)
@@ -61,7 +68,8 @@ def crear_mascota(request):
                 especie=especie,
                 edad=edad,
                 estado_vacunacion=estado_vacunacion,
-                fecha_ultima_vacuna=fecha_ultima_vacuna if fecha_ultima_vacuna else None
+                fecha_ultima_vacuna=fecha_ultima_vacuna if fecha_ultima_vacuna else None,
+                veterinario=request.user  # <-- asigna el usuario actual
             )
             messages.success(request, f'¡Mascota {nombre} creada exitosamente!')
             return redirect('lista_mascotas')
@@ -75,12 +83,16 @@ def crear_mascota(request):
 
 
 # ============================================================
-# EDITAR MASCOTA (solo administradores)
+# EDITAR MASCOTA (solo admin o dueño de la mascota)
 # ============================================================
 @login_required
-@user_passes_test(es_administrador)
 def editar_mascota(request, pk):
     mascota = get_object_or_404(Mascota, pk=pk)
+
+    # Verificar permiso: admin o dueño
+    if not (request.user.is_superuser or request.user.is_staff or mascota.veterinario == request.user):
+        messages.error(request, 'No tienes permiso para editar esta mascota.')
+        return redirect('lista_mascotas')
 
     if request.method == 'POST':
         mascota.nombre = request.POST.get('nombre')
@@ -101,12 +113,16 @@ def editar_mascota(request, pk):
 
 
 # ============================================================
-# ELIMINAR MASCOTA (solo administradores)
+# ELIMINAR MASCOTA (solo admin o dueño)
 # ============================================================
 @login_required
-@user_passes_test(es_administrador)
 def eliminar_mascota(request, pk):
     mascota = get_object_or_404(Mascota, pk=pk)
+
+    if not (request.user.is_superuser or request.user.is_staff or mascota.veterinario == request.user):
+        messages.error(request, 'No tienes permiso para eliminar esta mascota.')
+        return redirect('lista_mascotas')
+
     nombre = mascota.nombre
 
     if request.method == 'POST':
@@ -118,14 +134,14 @@ def eliminar_mascota(request, pk):
 
 
 # ============================================================
-# BUSCAR MASCOTA POR NOMBRE
+# BUSCAR MASCOTA POR NOMBRE (solo las visibles)
 # ============================================================
 @login_required
 def buscar_mascota(request):
     query = request.GET.get('q', '')
     mascotas = []
     if query:
-        mascotas = Mascota.objects.filter(nombre__icontains=query)
+        mascotas = mascotas_visibles_para(request.user).filter(nombre__icontains=query)
 
     return render(request, 'mascotas/buscar.html', {
         'mascotas': mascotas,
@@ -138,8 +154,7 @@ def buscar_mascota(request):
 # ============================================================
 @login_required
 def vacunas_mes(request):
-    mascotas = Mascota.objects.filter(estado_vacunacion='pendiente')
-    # Filtrar las que realmente necesitan vacuna este mes
+    mascotas = mascotas_visibles_para(request.user).filter(estado_vacunacion='pendiente')
     mascotas_necesitan = [m for m in mascotas if m.necesita_vacuna_este_mes()]
 
     return render(request, 'mascotas/vacunas_mes.html', {
@@ -148,12 +163,15 @@ def vacunas_mes(request):
 
 
 # ============================================================
-# ACTUALIZAR ESTADO DE VACUNACIÓN (solo administradores)
+# ACTUALIZAR ESTADO DE VACUNACIÓN (solo admin o dueño)
 # ============================================================
 @login_required
-@user_passes_test(es_administrador)
 def actualizar_vacunacion(request, pk):
     mascota = get_object_or_404(Mascota, pk=pk)
+
+    if not (request.user.is_superuser or request.user.is_staff or mascota.veterinario == request.user):
+        messages.error(request, 'No tienes permiso para actualizar esta mascota.')
+        return redirect('lista_mascotas')
 
     if request.method == 'POST':
         nuevo_estado = request.POST.get('estado_vacunacion')
@@ -173,9 +191,8 @@ def actualizar_vacunacion(request, pk):
     })
 
 
-
 # ============================================================
-# INICIAR SESIÓN (para todos los usuarios)
+# INICIAR SESIÓN
 # ============================================================
 def iniciar_sesion(request):
     if request.method == 'POST':
